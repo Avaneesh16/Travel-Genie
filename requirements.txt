@@ -1,0 +1,13 @@
+flask>=3.0.0
+openai>=1.0.0
+python-dotenv>=1.0.0
+flask-sqlalchemy>=3.1.1
+google-api-python-client>=2.0.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=1.0.0
+python-dateutil>=2.8.2
+dateparser>=1.2.0
+pytz>=2023.3
+regex>=2023.10.3
+tzlocal>=4.2
+airtable-python-wrapper>=0.15.0

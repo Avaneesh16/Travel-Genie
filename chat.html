@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Genie AI Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Left Sidebar - User Preferences -->
+    <aside class="preferences-sidebar">
+        {% if user_profile.get('Preferences') is not none %}
+        <form id="preferencesForm" class="preferences-form">
+            <h2>✨ Your Preferences</h2>
+            <!-- General Preferences -->
+            <div class="form-section">
+                <h4>General Settings</h4>
+                <div class="form-group">
+                    <label for="theme" data-tooltip="Choose your preferred color theme">Theme:</label>
+                    <select name="theme" id="theme">
+                        <option value="light">Light Mode</option>
+                        <option value="dark">Dark Mode</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="timezone" data-tooltip="Select your local timezone">Timezone:</label>
+                    <select name="timezone" id="timezone">
+                        <option value="America/Denver">Mountain Time (MT)</option>
+                        <option value="America/New_York">Eastern Time (ET)</option>
+                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                        <option value="America/Chicago">Central Time (CT)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Food Preferences -->
+            <div class="form-section">
+                <h4>Food Preferences</h4>
+                <div class="form-group">
+                    <label for="budget_per_meal" data-tooltip="Set your average meal budget">Budget per Meal ($):</label>
+                    <input type="number" id="budget_per_meal" min="5" max="500" step="5">
+                </div>
+                <div class="form-group">
+                    <label for="dietary_restrictions" data-tooltip="Select any dietary restrictions">Dietary Needs:</label>
+                    <select id="dietary_restrictions" multiple>
+                        <option value="vegetarian">Vegetarian</option>
+                        <option value="vegan">Vegan</option>
+                        <option value="gluten-free">Gluten-free</option>
+                        <option value="dairy-free">Dairy-free</option>
+                        <option value="kosher">Kosher</option>
+                        <option value="halal">Halal</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cuisine_preferences" data-tooltip="Choose your favorite cuisines">Favorite Cuisines:</label>
+                    <select id="cuisine_preferences" multiple>
+                        <option value="italian">Italian</option>
+                        <option value="indian">Indian</option>
+                        <option value="mexican">Mexican</option>
+                        <option value="chinese">Chinese</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="thai">Thai</option>
+                        <option value="mediterranean">Mediterranean</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Travel Preferences -->
+            <div class="form-section">
+                <h4>Travel Preferences</h4>
+                <div class="form-group">
+                    <label for="travel_mode" data-tooltip="Choose your preferred way to travel">Travel Mode:</label>
+                    <select id="travel_mode">
+                        <option value="driving">Driving</option>
+                        <option value="flying">Flying</option>
+                        <option value="transit">Public Transit</option>
+                        <option value="train">Train</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="max_travel_time" data-tooltip="Maximum time you're willing to travel">Max Travel Time (min):</label>
+                    <input type="number" id="max_travel_time" min="15" max="1440" step="15">
+                </div>
+                <div class="form-group">
+                    <label for="accommodation_budget" data-tooltip="Your daily accommodation budget">Daily Budget ($):</label>
+                    <input type="number" id="accommodation_budget" min="50" max="1000" step="10">
+                </div>
+                <div class="form-group">
+                    <label for="preferred_airlines" data-tooltip="Select your preferred airlines">Preferred Airlines:</label>
+                    <select id="preferred_airlines" multiple>
+                        <option value="united">United Airlines</option>
+                        <option value="delta">Delta Airlines</option>
+                        <option value="american">American Airlines</option>
+                        <option value="southwest">Southwest Airlines</option>
+                        <option value="jetblue">JetBlue</option>
+                        <option value="alaska">Alaska Airlines</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button type="submit">💾 Save Preferences</button>
+        </form>
+        {% endif %}
+    </aside>
+
+    <!-- Right Side - Chat Interface -->
+    <main class="chat-container">
+        <header class="chat-header">
+            <h1>Genie AI Assistant</h1>
+            <div class="controls">
+                <button onclick="clearHistory()" class="control-button">
+                    🗑️ Clear
+                </button>
+                <button onclick="logoutUser()" class="control-button">
+                    🚪 Logout
+                </button>
+                <div class="voice-controls">
+                    <button id="voice-btn" class="voice-button" title="Voice Input">🎤</button>
+                    <button id="mute-btn" class="voice-button" title="Toggle Voice Output">🔊</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="auth-prompt" id="authPrompt" style="display: none;">
+            <h3>📅 Calendar Integration</h3>
+            <p>Connect your Google Calendar to manage events:</p>
+            <div class="calendar-buttons">
+                <a href="/authorize" class="auth-button">Connect Google Account</a>
+                <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" class="calendar-button">Open Calendar</a>
+            </div>
+        </div>
+
+        <div class="chat-history" id="chatHistory">
+            {% for message in messages %}
+            <div class="message {{ 'user' if message.role == 'user' else 'ai' }}">
+                {% if message.role == 'assistant' and '**Your Schedule**' in message.content %}
+                <div class="calendar-view">
+                    {{ message.content|process_calendar|safe }}
+                </div>
+                {% else %}
+                {{ message.content|safe }}
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="chat-input">
+            <form id="chatForm" onsubmit="sendMessage(event)">
+                <input type="text" 
+                       id="messageInput" 
+                       placeholder="Type your message..." 
+                       autocomplete="off"
+                       autofocus>
+                <button type="submit" class="control-button">Send</button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Keep existing JavaScript code unchanged -->
+    <script>
+        // Add at the beginning of your script
+        let isMuted = false;
+        const muteBtn = document.getElementById('mute-btn');
+        
+        muteBtn.addEventListener('click', function() {
+            isMuted = !isMuted;
+            this.textContent = isMuted ? '🔇' : '🔊';
+            this.title = isMuted ? 'Unmute Voice Output' : 'Mute Voice Output';
+            
+            if (isMuted) {
+                speechSynthesis.cancel(); // Stop any ongoing speech
+            }
+        });
+
+        // Add speech recognition setup
+        let recognition;
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = transcript;
+                // Auto-send voice message
+                sendMessage(new Event('submit'));
+            };
+
+            recognition.onend = function() {
+                document.getElementById('voice-btn').textContent = '🎤';
+            };
+        }
+
+        document.getElementById('voice-btn').addEventListener('click', function() {
+            if (recognition) {
+                try {
+                    recognition.start();
+                    this.textContent = '🔴';
+                } catch (e) {
+                    console.error('Speech recognition error:', e);
+                }
+            }
+        });
+
+        // Add travel plan formatting
+        function formatTravelMessage(content) {
+            if (content.includes('🌍 Travel Plan')) {
+                return `<div class="travel-plan">
+                    ${content.split('\n').map(line => {
+                        if (line.startsWith('- ')) {
+                            return `<div class="date-option">${line.substring(2)}</div>`;
+                        }
+                        return `<div class="${line.startsWith('✈️') ? 'travel-mode' : 
+                                           line.startsWith('💰') ? 'budget' :
+                                           line.startsWith('⏱️') ? 'time' : 'text'}">${line}</div>`;
+                    }).join('')}
+                </div>`;
+            }
+            return content;
+        }
+
+        // Keep existing sendMessage function but add text-to-speech
+        function sendMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatHistory = document.getElementById('chatHistory');
+            
+            // Add user message
+            chatHistory.innerHTML += `
+                <div class="message user">${message}</div>
+            `;
+            
+            // Clear input
+            input.value = '';
+            
+            // Get AI response
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `message=${encodeURIComponent(message)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    if (data.error.includes('authenticate')) {
+                        document.getElementById('authPrompt').style.display = 'block';
+                    }
+                    chatHistory.innerHTML += `
+                        <div class="message error">Error: ${data.error}</div>
+                    `;
+                    console.error('API Error:', data.error);
+                } else {
+                    const formattedResponse = formatTravelMessage(data.response);
+                    chatHistory.innerHTML += `
+                        <div class="message ai">${formattedResponse}</div>
+                    `;
+                    // Add text-to-speech for AI responses
+                    speakResponse(data.response);
+                }
+                // Scroll to bottom
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }).catch(error => {
+                handleError(error.message);
+            });
+        }
+
+        // Modify the existing speakResponse function
+        function speakResponse(text) {
+            if ('speechSynthesis' in window && !isMuted) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function handleError(error) {
+            if (error.includes('authenticate')) {
+                document.getElementById('authPrompt').style.display = 'block';
+            }
+            // ... rest of error handling
+        }
+
+        function clearHistory() {
+            fetch('/clear', { method: 'POST' })
+                .then(() => location.reload());
+        }
+
+        function logoutUser() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        // Update the form submission handler
+        document.getElementById('preferencesForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                theme: document.getElementById('theme').value,
+                timezone: document.getElementById('timezone').value,
+                food_preferences: {
+                    budget_per_meal: parseInt(document.getElementById('budget_per_meal').value),
+                    dietary_restrictions: Array.from(document.getElementById('dietary_restrictions').selectedOptions).map(opt => opt.value),
+                    cuisine_preferences: Array.from(document.getElementById('cuisine_preferences').selectedOptions).map(opt => opt.value)
+                },
+                travel_preferences: {
+                    mode: document.getElementById('travel_mode').value,
+                    max_travel_time: parseInt(document.getElementById('max_travel_time').value),
+                    accommodation_budget: parseInt(document.getElementById('accommodation_budget').value),
+                    preferred_airlines: Array.from(document.getElementById('preferred_airlines').selectedOptions).map(opt => opt.value)
+                }
+            };
+            
+            try {
+                const response = await fetch('/update_profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `preferences=${encodeURIComponent(JSON.stringify(formData))}`
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('Preferences saved successfully!');
+                } else {
+                    alert('Error saving preferences: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error saving preferences: ' + error);
+            }
+        });
+
+        // Update the load preferences handler
+        window.addEventListener('load', () => {
+            try {
+                // Fix JSON parsing by properly escaping the JSON string
+                const prefsStr = '{{ user_profile.Preferences|tojson|safe }}';
+                const savedPrefs = prefsStr ? JSON.parse(prefsStr.replace(/\n/g, '\\n')) : {};
+                
+                if (!savedPrefs) {
+                    console.warn('No preferences found, using defaults');
+                    return;
+                }
+
+                // Load general preferences
+                document.getElementById('theme').value = savedPrefs.theme || 'light';
+                document.getElementById('timezone').value = savedPrefs.timezone || 'America/Denver';
+                
+                // Load food preferences
+                if (savedPrefs.food_preferences) {
+                    document.getElementById('budget_per_meal').value = savedPrefs.food_preferences.budget_per_meal || 20;
+                    setMultipleValues('dietary_restrictions', savedPrefs.food_preferences.dietary_restrictions || []);
+                    setMultipleValues('cuisine_preferences', savedPrefs.food_preferences.cuisine_preferences || []);
+                }
+                
+                // Load travel preferences
+                if (savedPrefs.travel_preferences) {
+                    document.getElementById('travel_mode').value = savedPrefs.travel_preferences.mode || 'driving';
+                    document.getElementById('max_travel_time').value = savedPrefs.travel_preferences.max_travel_time || 60;
+                    document.getElementById('accommodation_budget').value = savedPrefs.travel_preferences.accommodation_budget || 150;
+                    setMultipleValues('preferred_airlines', savedPrefs.travel_preferences.preferred_airlines || []);
+                }
+            } catch (e) {
+                console.error('Error loading preferences:', e);
+                // Use default values if there's an error
+                setDefaultPreferences();
+            }
+        });
+
+        function setDefaultPreferences() {
+            document.getElementById('theme').value = 'light';
+            document.getElementById('timezone').value = 'America/Denver';
+            document.getElementById('budget_per_meal').value = 20;
+            document.getElementById('travel_mode').value = 'driving';
+            document.getElementById('max_travel_time').value = 60;
+            document.getElementById('accommodation_budget').value = 150;
+        }
+
+        function setMultipleValues(selectId, values) {
+            const select = document.getElementById(selectId);
+            for (const option of select.options) {
+                option.selected = values.includes(option.value);
+            }
+        }
+    </script>
+</body>
+</html>

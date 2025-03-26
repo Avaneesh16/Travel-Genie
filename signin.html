@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign In - Genie AI Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/signin.css') }}">
+</head>
+<body>
+    <div class="signin-container">
+        <h1>Welcome to Genie AI</h1>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('signin')">Sign In</button>
+            <button class="tab-btn" onclick="showTab('signup')">Create Account</button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form id="signinForm" class="auth-form">
+            <div class="form-group">
+                <label for="signin-email">Email</label>
+                <input type="email" id="signin-email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="signin-password">Password</label>
+                <input type="password" id="signin-password" name="password" required>
+            </div>
+            <button type="submit">Sign In</button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="signupForm" class="auth-form" style="display: none;">
+            <div class="form-group">
+                <label for="signup-name">Full Name</label>
+                <input type="text" id="signup-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="signup-email">Email</label>
+                <input type="email" id="signup-email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" name="password" 
+                       pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$" 
+                       title="Password must be at least 8 characters and include letters and numbers"
+                       required>
+            </div>
+            <div class="form-group">
+                <label for="confirm-password">Confirm Password</label>
+                <input type="password" id="confirm-password" name="confirm-password" required>
+            </div>
+            <button type="submit">Create Account</button>
+        </form>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            document.querySelectorAll('.auth-form').forEach(form => form.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(`${tabName}Form`).style.display = 'block';
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+        }
+
+        document.getElementById('signinForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                email: document.getElementById('signin-email').value,
+                password: document.getElementById('signin-password').value,
+                type: 'signin'
+            };
+            
+            try {
+                const response = await fetch('/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = '/';
+                } else {
+                    alert(result.error || 'Invalid credentials');
+                }
+            } catch (error) {
+                alert('Error signing in');
+            }
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+            
+            const formData = {
+                name: document.getElementById('signup-name').value,
+                email: document.getElementById('signup-email').value,
+                password: password,
+                type: 'signup'
+            };
+            
+            try {
+                const response = await fetch('/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = '/';
+                } else {
+                    alert(result.error || 'Error creating account');
+                }
+            } catch (error) {
+                alert('Error creating account');
+            }
+        });
+    </script>
+</body>
+</html>
